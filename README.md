@@ -65,8 +65,6 @@ yarn web
 ## 🛠️ Funcionalidades
 
 - Operações matemáticas básicas (adição, subtração, multiplicação, divisão)
-- Interface responsiva e moderna
-- Suporte a temas claro/escuro
 - Histórico de cálculos
 - Design intuitivo e fácil de usar
 

@@ -3,13 +3,8 @@ import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Sta
 import { CalculatorInput } from '../ui/CalculatorInput';
 import { OperationButton } from '../ui/OperationButton';
 import { HistoryItem } from '../ui/HistoryItem';
-
-const OPERATION_COLORS = {
-  '+': '#4CAF50', // Verde
-  '-': '#FF5722', // Laranja
-  '×': '#2196F3', // Azul
-  '÷': '#9C27B0', // Roxo
-};
+import { COLORS, SIZES } from '../../constants/theme';
+import { calculateOperation, validateInput } from '../../services/calculator.service';
 
 interface Calculation {
   firstNumber: string;
@@ -18,68 +13,76 @@ interface Calculation {
   result: string;
 }
 
+const OPERATION_COLORS = {
+  '+': COLORS.operations.add,
+  '-': COLORS.operations.subtract,
+  '×': COLORS.operations.multiply,
+  '÷': COLORS.operations.divide,
+};
+
 export const CalculatorScreen = () => {
   const [firstNumber, setFirstNumber] = useState('');
   const [secondNumber, setSecondNumber] = useState('');
   const [result, setResult] = useState('');
   const [currentOperation, setCurrentOperation] = useState<string | null>(null);
   const [history, setHistory] = useState<Calculation[]>([]);
+  const [error, setError] = useState<string>('');
 
   const clearAll = () => {
     setFirstNumber('');
     setSecondNumber('');
     setResult('');
     setCurrentOperation(null);
+    setError('');
   };
 
-  const calculate = (operation: string) => {
-    const num1 = parseFloat(firstNumber);
-    const num2 = parseFloat(secondNumber);
-
-    if (isNaN(num1) || isNaN(num2)) {
-      setResult('Por favor, insira números válidos');
-      setCurrentOperation(null);
-      return;
+  const handleInputChange = (value: string, setter: (value: string) => void) => {
+    if (value === '' || validateInput(value)) {
+      setter(value);
+      setError('');
     }
+  };
 
-    let calculatedResult: number;
-    switch (operation) {
-      case '+':
-        calculatedResult = num1 + num2;
-        break;
-      case '-':
-        calculatedResult = num1 - num2;
-        break;
-      case '×':
-        calculatedResult = num1 * num2;
-        break;
-      case '÷':
-        if (num2 === 0) {
-          setResult('Não é possível dividir por zero');
-          setCurrentOperation(null);
-          return;
-        }
-        calculatedResult = num1 / num2;
-        break;
-      default:
+  const handleCalculation = (operation: string) => {
+    try {
+      if (!firstNumber || !secondNumber) {
+        throw new Error('Por favor, preencha ambos os números');
+      }
+
+      const num1 = parseFloat(firstNumber);
+      const num2 = parseFloat(secondNumber);
+
+      if (isNaN(num1) || isNaN(num2)) {
+        throw new Error('Por favor, insira números válidos');
+      }
+
+      const calculationResult = calculateOperation(operation, num1, num2);
+
+      if (calculationResult.error) {
+        setError(calculationResult.error);
         return;
+      }
+
+      setResult(calculationResult.result);
+      setCurrentOperation(operation);
+      setError('');
+
+      const newCalculation: Calculation = {
+        firstNumber,
+        secondNumber,
+        operation,
+        result: calculationResult.result,
+      };
+
+      setHistory(prev => [newCalculation, ...prev].slice(0, SIZES.maxHistoryItems));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Erro ao calcular');
     }
-
-    const resultString = calculatedResult.toString();
-    setResult(resultString);
-    setCurrentOperation(operation);
-
-    setHistory(prev => [{
-      firstNumber,
-      secondNumber,
-      operation,
-      result: resultString,
-    }, ...prev].slice(0, 5));
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background.card} />
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -101,35 +104,39 @@ export const CalculatorScreen = () => {
               <CalculatorInput
                 label="Primeiro Número"
                 value={firstNumber}
-                onChangeText={setFirstNumber}
+                onChangeText={(value) => handleInputChange(value, setFirstNumber)}
               />
               
               <CalculatorInput
                 label="Segundo Número"
                 value={secondNumber}
-                onChangeText={setSecondNumber}
+                onChangeText={(value) => handleInputChange(value, setSecondNumber)}
               />
             </View>
+
+            {error ? (
+              <Text style={styles.errorText}>{error}</Text>
+            ) : null}
 
             <View style={styles.operationsContainer}>
               <OperationButton 
                 label="+" 
-                onPress={() => calculate('+')} 
+                onPress={() => handleCalculation('+')} 
                 color={OPERATION_COLORS['+']}
               />
               <OperationButton 
                 label="-" 
-                onPress={() => calculate('-')} 
+                onPress={() => handleCalculation('-')} 
                 color={OPERATION_COLORS['-']}
               />
               <OperationButton 
                 label="×" 
-                onPress={() => calculate('×')} 
+                onPress={() => handleCalculation('×')} 
                 color={OPERATION_COLORS['×']}
               />
               <OperationButton 
                 label="÷" 
-                onPress={() => calculate('÷')} 
+                onPress={() => handleCalculation('÷')} 
                 color={OPERATION_COLORS['÷']}
               />
             </View>
@@ -174,7 +181,7 @@ export const CalculatorScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: COLORS.background.primary,
   },
   scrollContent: {
     flexGrow: 1,
@@ -191,11 +198,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1A1A1A',
+    color: COLORS.text.primary,
   },
   clearButton: {
     padding: 10,
-    backgroundColor: '#FF3B30',
+    backgroundColor: COLORS.button.clear,
     borderRadius: 8,
     elevation: 2,
     shadowColor: '#000',
@@ -207,12 +214,18 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   clearButtonText: {
-    color: '#FFFFFF',
+    color: COLORS.background.card,
     fontWeight: 'bold',
     fontSize: 14,
   },
+  errorText: {
+    color: COLORS.button.clear,
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 10,
+  },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.background.card,
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
@@ -237,28 +250,28 @@ const styles = StyleSheet.create({
   resultContainer: {
     marginTop: 20,
     padding: 16,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: COLORS.background.primary,
     borderRadius: 12,
   },
   resultLabel: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.text.secondary,
     marginBottom: 8,
     fontWeight: '500',
   },
   resultText: {
     fontSize: 32,
-    color: '#1A1A1A',
+    color: COLORS.text.primary,
     fontWeight: 'bold',
   },
   operationText: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.text.secondary,
     marginTop: 8,
     fontStyle: 'italic',
   },
   historyCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.background.card,
     borderRadius: 16,
     padding: 20,
     elevation: 4,
@@ -273,7 +286,7 @@ const styles = StyleSheet.create({
   historyTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1A1A1A',
+    color: COLORS.text.primary,
     marginBottom: 16,
   },
 }); 

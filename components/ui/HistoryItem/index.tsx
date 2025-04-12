@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text } from 'react-native';
+import { styles } from './styles';
 
 interface HistoryItemProps {
   firstNumber: string;
@@ -18,37 +19,15 @@ export const HistoryItem: React.FC<HistoryItemProps> = ({
 }) => {
   return (
     <View style={styles.container}>
-      <Text style={styles.expression}>
-        <Text style={styles.number}>{firstNumber}</Text>
-        <Text style={[styles.operator, { color }]}>{` ${operation} `}</Text>
-        <Text style={styles.number}>{secondNumber}</Text>
-        <Text style={styles.equals}> = </Text>
-        <Text style={[styles.result, { color }]}>{result}</Text>
-      </Text>
+      <View style={[styles.operation, { backgroundColor: color }]}>
+        <Text style={styles.operationText}>{operation}</Text>
+      </View>
+      <View style={styles.content}>
+        <Text style={styles.calculation}>
+          {firstNumber} {operation} {secondNumber}
+        </Text>
+        <Text style={styles.result}>{result}</Text>
+      </View>
     </View>
   );
-};
-
-const styles = StyleSheet.create({
-  container: {
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  expression: {
-    fontSize: 16,
-    color: '#333',
-  },
-  number: {
-    fontWeight: '500',
-  },
-  operator: {
-    fontWeight: 'bold',
-  },
-  equals: {
-    color: '#666',
-  },
-  result: {
-    fontWeight: 'bold',
-  },
-}); 
+}; 
